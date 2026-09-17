@@ -1,0 +1,73 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Helvetica Neue", Arial, sans-serif;
+  --font-serif: "Georgia", serif;
+  
+  --color-brand-bg: #F7F6F3;
+  --color-brand-primary: #6A1E2C;
+  --color-brand-text: #2B2B2B;
+  --color-brand-gold: #C6A86B;
+}
+
+body {
+  background-color: var(--color-brand-bg);
+  color: var(--color-brand-text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background-color: var(--color-brand-gold);
+  color: #fff;
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+  
+  *, *::before, *::after {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  
+  html, body {
+    width: 210mm;
+    height: 297mm;
+    background-color: var(--color-brand-bg) !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+  }
+  
+  /* Ensure the grid doesn't break pages across */
+  .container, #root {
+    page-break-after: avoid; 
+    page-break-before: avoid;
+    background-color: var(--color-brand-bg) !important;
+    width: 210mm;
+    height: 297mm;
+    overflow: hidden;
+  }
+
+  /* 
+   IMPORTANT: Force framer-motion elements to be fully visible and in place.
+   When printing directly from mobile without scrolling, elements with 'whileInView' 
+   might still hold 'opacity: 0' and 'transform' inline styles.
+  */
+  * {
+    opacity: 1 !important;
+    transform: none !important;
+    animation: none !important;
+    transition: none !important;
+  }
+
+  /* Keep the print fallback UI hidden correctly in actual print */
+  .print\:hidden {
+    display: none !important;
+  }
+}
