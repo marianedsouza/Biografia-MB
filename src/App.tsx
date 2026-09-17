@@ -167,14 +167,14 @@ export default function App() {
             transition={{ duration: 0.8, delay: 0.15, ease: "easeOut" }}
             className="relative shrink-0 flex items-center justify-center print:!m-0"
           >
-            <div className="w-[170px] h-[170px] md:w-[200px] md:h-[200px] print:w-[105px] print:h-[105px] bg-[#E0E0DE] border border-brand-gold rounded-[3px] overflow-hidden relative shadow-sm">
+            <div className="w-[180px] h-[240px] md:w-[210px] md:h-[280px] print:w-[112px] print:h-[148px] bg-[#E0E0DE] border border-brand-gold rounded-[3px] overflow-hidden relative shadow-sm">
               <img 
                 src={PHOTO_CANDIDATES[photoIndex]} 
                 onError={() => {
                   setPhotoIndex(idx => (idx + 1 < PHOTO_CANDIDATES.length ? idx + 1 : idx));
                 }}
                 alt="Mayara Barros - Foto Institucional" 
-                className="w-full h-full object-cover object-top hover:scale-102 transition-transform duration-700 ease-in-out"
+                className="w-full h-full object-cover object-[center_35%] hover:scale-102 transition-transform duration-700 ease-in-out"
               />
             </div>
           </motion.div>
