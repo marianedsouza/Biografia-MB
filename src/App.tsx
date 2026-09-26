@@ -1,384 +1,441 @@
-import { motion } from "motion/react";
-import { useEffect, useState, type ReactNode } from "react";
+import { useState, useRef } from "react";
 import { 
-  MapPin, 
-  Download,
-  ExternalLink,
-  Share2
+  Download, 
+  Printer, 
+  Share2, 
+  Check, 
+  Loader2,
+  ExternalLink
 } from "lucide-react";
 
-// Artistic Editorial Section Title with gold trailing border line
-const SectionTitle = ({ children, className = "" }: { children: ReactNode; className?: string }) => (
-  <h2 className={`font-serif italic text-brand-primary text-[17px] md:text-[18px] print:text-[12px] mb-2.5 print:mb-1.5 flex items-center after:content-[''] after:flex-grow after:border-t-[1.5px] after:border-brand-gold/40 after:ml-3 print:after:border-brand-gold print:after:opacity-100 ${className}`}>
-    {children}
-  </h2>
-);
-
-const Section = ({ 
-  title, 
-  children, 
-  delay = 0.1, 
-  className = "" 
-}: { 
-  title: string; 
-  children: ReactNode; 
-  delay?: number; 
-  className?: string; 
-}) => (
-  <motion.section 
-    initial={{ opacity: 0, y: 15 }}
-    whileInView={{ opacity: 1, y: 0 }}
-    viewport={{ once: true, margin: "-10px" }}
-    transition={{ duration: 0.5, delay, ease: "easeOut" }}
-    className={`mb-6 print:mb-2.5 ${className}`}
-  >
-    <SectionTitle>{title}</SectionTitle>
-    <div className="text-brand-text text-[13px] md:text-[13.5px] print:text-[9.5px] leading-[1.55] print:leading-[1.32] space-y-2 print:space-y-1">
-      {children}
-    </div>
-  </motion.section>
-);
-
-const PHOTO_CANDIDATES = [
-  "/IMG_6120.JPEG",
-  "/mayara-barros.png",
-];
-
 export default function App() {
-  const [photoIndex, setPhotoIndex] = useState(0);
-  const [isReadyToPrint, setIsReadyToPrint] = useState(false);
-  
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("print") === "true") {
-      setIsReadyToPrint(true);
-      setTimeout(() => {
-        window.print();
-        window.history.replaceState({}, document.title, window.location.pathname);
-      }, 800);
-    }
-  }, []);
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportSuccess, setExportSuccess] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const documentRef = useRef<HTMLDivElement>(null);
 
-  const handleDownloadPDF = () => {
-    const ua = navigator.userAgent || navigator.vendor || (window as any).opera;
-    const isInAppBrowser = (ua.indexOf("FBAN") > -1) || 
-                           (ua.indexOf("FBAV") > -1) || 
-                           (ua.indexOf("Instagram") > -1) || 
-                           (ua.indexOf("WhatsApp") > -1);
+  // Reliable PDF Export via html2pdf.js
+  const handleExportPDF = async () => {
+    if (!documentRef.current) return;
+    setIsExporting(true);
+    setExportSuccess(false);
 
-    if (isInAppBrowser) {
-      alert("⚠️ Para salvar ou imprimir o PDF, abra no navegador padrão (Chrome ou Safari). Clique nos 3 pontinhos e escolha 'Abrir no navegador'.");
-      return;
-    }
+    try {
+      // Dynamically import html2pdf for robust client-side execution
+      const html2pdfModule = await import("html2pdf.js");
+      const html2pdf = (html2pdfModule.default || html2pdfModule) as any;
 
-    if (window.self !== window.top) {
-      const url = window.location.href.split('?')[0] + '?print=true';
-      window.open(url, "_blank");
-    } else {
+      const opt = {
+        margin: 0,
+        filename: "Mayara_Barros_Perfil_Executivo_2026.pdf",
+        image: { type: "jpeg", quality: 0.98 },
+        html2canvas: { 
+          scale: 2, 
+          useCORS: true, 
+          letterRendering: true,
+          scrollY: 0,
+          backgroundColor: "#FAF8F5"
+        },
+        jsPDF: { 
+          unit: "mm", 
+          format: "a4", 
+          orientation: "portrait" 
+        },
+        pagebreak: { 
+          mode: ["avoid-all", "css", "legacy"],
+          before: ".pdf-page-2"
+        }
+      };
+
+      await html2pdf().set(opt).from(documentRef.current).save();
+      setExportSuccess(true);
+      setTimeout(() => setExportSuccess(false), 3000);
+    } catch (err) {
+      console.error("PDF export error:", err);
+      // Fallback to window.print if html2pdf encounters an issue
       window.print();
+    } finally {
+      setIsExporting(false);
     }
   };
 
+  const handlePrint = () => {
+    window.print();
+  };
+
   const handleShare = () => {
-    const baseUrl = window.location.href.split('?')[0]; 
-    const cacheBusterUrl = baseUrl.endsWith('/') ? `${baseUrl}?v=2026` : `${baseUrl}/?v=2026`;
-    
-    const message = `*Biografia Institucional | Mayara Barros*\nMobilização Social • Articulação Institucional • Construção de Movimentos e Territórios\n${cacheBusterUrl}`;
+    const url = window.location.href.split('?')[0];
+    const message = `*Mayara Barros — Perfil Executivo | 2026*\nEstrategista em Desenvolvimento Institucional e Projetos de Impacto\nTransformar intenção em direção. E direção em projetos que acontecem.\n${url}`;
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');
   };
 
+  const handleCopyLink = () => {
+    const url = window.location.href.split('?')[0];
+    navigator.clipboard.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
-    <div className="min-h-screen bg-brand-bg text-brand-text flex flex-col items-center selection:bg-brand-gold/30 selection:text-brand-primary print:min-h-0 print:bg-brand-bg relative antialiased">
+    <div className="min-h-screen bg-[#EAE7E1] text-[#2D2828] flex flex-col items-center py-3 sm:py-6 md:py-10 pb-8 sm:pb-12 print:py-0 print:pb-0 print:bg-[#FAF8F5] relative antialiased selection:bg-[#631B26] selection:text-white">
       
-      {/* Mobile / In-App Print Modal Fallback */}
-      {isReadyToPrint && (
-        <div className="print:hidden fixed inset-0 bg-[#F7F6F3]/95 backdrop-blur-sm z-[100000] flex flex-col items-center justify-center p-6 text-center">
-          <div className="bg-white p-8 md:p-12 w-full max-w-[420px] border-[1.5px] border-brand-gold shadow-[8px_8px_0_0_rgba(198,168,107,0.3)] flex flex-col items-center">
-            <Download size={32} className="text-brand-primary mb-3" />
-            <h2 className="text-brand-primary font-serif text-[22px] mb-2 font-normal">Biografia Institucional</h2>
-            <p className="text-brand-text text-[13px] leading-relaxed mb-6">
-              Se o diálogo de impressão não abriu automaticamente em seu dispositivo móvel, clique no botão abaixo:
-            </p>
-            <button 
-               onClick={() => window.print()}
-               className="w-full py-[12px] bg-brand-primary text-white uppercase tracking-[0.1em] text-[11px] font-semibold hover:opacity-95 transition-all mb-3 cursor-pointer"
-            >
-               Gerar PDF Agora
-            </button>
-            <button 
-               onClick={() => setIsReadyToPrint(false)}
-               className="text-[12px] text-brand-text underline cursor-pointer"
-            >
-               Voltar para Visualização
-            </button>
-          </div>
+      {/* Top Action Bar (Header with all actions) */}
+      <nav aria-label="Menu de Ações" className="print:hidden w-full max-w-[820px] px-2 sm:px-4 md:px-0 mb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <div className="flex items-center gap-1.5 text-[11px] sm:text-[12px] font-semibold text-[#631B26] tracking-wide px-1 sm:px-0">
+          <span className="w-2 h-2 rounded-full bg-[#631B26]" />
+          <span>Mayara Barros • Perfil Oficial</span>
         </div>
-      )}
 
-      {/* Floating Action Buttons */}
-      <div className="print:hidden fixed bottom-6 right-5 md:bottom-8 md:right-8 flex flex-col sm:flex-row gap-2.5 z-[9999]">
-        <button 
-          onClick={handleShare}
-          title="Compartilhar no WhatsApp"
-          className="p-3 bg-brand-primary text-white border border-brand-primary/30 flex items-center justify-center shadow-[3px_3px_0_0_rgba(198,168,107,0.35)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all cursor-pointer rounded-[2px]"
-        >
-          <Share2 size={16} />
-        </button>
-        <button 
-          onClick={handleDownloadPDF}
-          className="px-4 py-3 bg-brand-primary text-[#F7F6F3] flex items-center justify-center gap-2 text-[11px] uppercase tracking-[0.08em] shadow-[3px_3px_0_0_rgba(198,168,107,0.35)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all cursor-pointer rounded-[2px] font-medium"
-        >
-          <Download size={14} />
-          <span>Salvar / Imprimir PDF</span>
-        </button>
-      </div>
+        <div className="w-full sm:w-auto grid grid-cols-4 sm:flex items-center gap-1 sm:gap-2">
+          <button 
+            onClick={handleCopyLink}
+            title="Copiar Link"
+            className="min-w-0 w-full sm:w-auto px-1 sm:px-2.5 py-1.5 bg-white text-[#631B26] border border-[#631B26]/25 hover:border-[#631B26] rounded text-[10px] sm:text-[11px] font-medium shadow-xs flex items-center justify-center gap-1 cursor-pointer transition-all active:scale-95 whitespace-nowrap"
+          >
+            {copied ? <Check size={12} className="text-emerald-700 shrink-0" /> : <ExternalLink size={12} className="shrink-0" />}
+            <span className="truncate hidden sm:inline">{copied ? "Copiado!" : "Copiar Link"}</span>
+            <span className="truncate sm:hidden">{copied ? "Copiado!" : "Copiar"}</span>
+          </button>
 
-      {/* 
-        A4 Document Container
-        Screen: max-w-[1040px], px-6 py-10 md:px-12 md:py-10
-        Print: exact 210mm x 297mm single page layout
-      */}
-      <div className="w-full max-w-[1040px] px-6 py-8 md:px-12 md:py-10 print:px-[10mm] print:py-[8mm] print:max-w-none print:w-[210mm] print:h-[297mm] print:overflow-hidden print:bg-brand-bg relative box-border flex flex-col justify-between">
+          <button 
+            onClick={handleShare}
+            title="Compartilhar no WhatsApp"
+            className="min-w-0 w-full sm:w-auto px-1 sm:px-2.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded text-[10px] sm:text-[11px] font-medium shadow-xs flex items-center justify-center gap-1 cursor-pointer transition-all active:scale-95 whitespace-nowrap"
+          >
+            <Share2 size={12} className="shrink-0" />
+            <span className="truncate">WhatsApp</span>
+          </button>
+
+          <button 
+            onClick={handlePrint}
+            title="Imprimir"
+            className="min-w-0 w-full sm:w-auto px-1 sm:px-2.5 py-1.5 bg-white text-[#631B26] border border-[#631B26]/25 hover:border-[#631B26] rounded text-[10px] sm:text-[11px] font-medium shadow-xs flex items-center justify-center gap-1 cursor-pointer transition-all active:scale-95 whitespace-nowrap"
+          >
+            <Printer size={12} className="shrink-0" />
+            <span className="truncate">Imprimir</span>
+          </button>
+
+          <button 
+            onClick={handleExportPDF}
+            disabled={isExporting}
+            title="Baixar PDF Oficial"
+            className="min-w-0 w-full sm:w-auto px-1 sm:px-3 py-1.5 bg-[#631B26] hover:bg-[#4F131D] text-white rounded text-[10px] sm:text-[11px] uppercase tracking-wider font-semibold shadow-xs flex items-center justify-center gap-1 cursor-pointer transition-all active:scale-95 disabled:opacity-70 whitespace-nowrap"
+          >
+            {isExporting ? (
+              <>
+                <Loader2 size={12} className="animate-spin shrink-0" />
+                <span className="truncate">Gerando...</span>
+              </>
+            ) : exportSuccess ? (
+              <>
+                <Check size={12} className="text-emerald-300 shrink-0" />
+                <span className="truncate">Baixado!</span>
+              </>
+            ) : (
+              <>
+                <Download size={12} className="shrink-0" />
+                <span className="truncate">Baixar PDF</span>
+              </>
+            )}
+          </button>
+        </div>
+      </nav>
+
+      {/* Multi-Page Document Container (Targeted for PDF Export & Print) */}
+      <main ref={documentRef} className="print-wrapper w-full max-w-[820px] flex flex-col items-center gap-6 sm:gap-8 print:gap-0 px-2 sm:px-4 md:px-0">
         
-        {/* Top Header Section */}
-        <header className="flex justify-between items-start md:items-end print:items-center border-b-[1.5px] border-brand-gold pb-5 mb-5 print:pb-2.5 print:mb-2.5 flex-col md:flex-row print:flex-row gap-6 print:gap-4">
-          <motion.div 
-            initial={{ opacity: 0, x: -15 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.7, ease: "easeOut" }}
-            className="flex-1"
-          >
-            <div className="text-[10px] md:text-[11px] print:text-[8px] uppercase tracking-[0.2em] text-brand-gold font-semibold mb-1">
-              Biografia Institucional
-            </div>
-            <h1 className="font-serif text-4xl md:text-5xl lg:text-[54px] print:text-[34px] text-brand-primary font-normal leading-none mb-2 tracking-tight">
-              Mayara Barros
-            </h1>
-            
-            <p className="text-[11.5px] md:text-[12.5px] print:text-[8.5px] uppercase tracking-[0.08em] font-semibold text-brand-text leading-[1.4] max-w-[540px]">
-              Mobilização Social • Articulação Institucional • Construção de Movimentos e Territórios
-            </p>
-          </motion.div>
+        {/* ======================================================== */}
+        {/* PAGE 1                                                   */}
+        {/* ======================================================== */}
+        <section className="a4-page relative flex flex-col justify-between shadow-[0_8px_30px_rgba(0,0,0,0.1)] print:shadow-none border border-[#631B26]/10 print:border-none overflow-hidden rounded-[2px] sm:rounded-none">
           
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.96 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.8, delay: 0.15, ease: "easeOut" }}
-            className="relative shrink-0 flex items-center justify-center print:!m-0"
-          >
-            <div className="w-[180px] h-[240px] md:w-[210px] md:h-[280px] print:w-[112px] print:h-[148px] bg-[#E0E0DE] border border-brand-gold rounded-[3px] overflow-hidden relative shadow-sm">
-              <img 
-                src={PHOTO_CANDIDATES[photoIndex]} 
-                onError={() => {
-                  setPhotoIndex(idx => (idx + 1 < PHOTO_CANDIDATES.length ? idx + 1 : idx));
-                }}
-                alt="Mayara Barros - Foto Institucional" 
-                className="w-full h-full object-cover object-[center_35%] hover:scale-102 transition-transform duration-700 ease-in-out"
-              />
-            </div>
-          </motion.div>
-        </header>
+          {/* Top Wine Bar */}
+          <div className="w-full h-[14px] sm:h-[18px] bg-[#631B26] shrink-0" />
 
-        {/* 2-Column Balanced Editorial Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-[1.18fr_0.82fr] print:grid-cols-[1.18fr_0.82fr] gap-8 lg:gap-10 print:gap-5 flex-grow">
-          
-          {/* Coluna Principal (Left) */}
-          <main className="flex flex-col">
+          {/* Page 1 Body */}
+          <div className="px-5 py-6 sm:px-8 sm:py-8 md:px-14 md:pt-8 md:pb-6 flex-grow flex flex-col justify-between">
             
-            {/* Apresentação */}
-            <Section title="Apresentação" delay={0.1}>
-              <p>
-                Mayara Barros construiu sua trajetória entre a administração pública, a mobilização social, a articulação institucional, a participação política e, mais recentemente, a formação e atuação prática no campo jurídico.
-              </p>
-              <p>
-                Iniciou sua vida profissional aos 16 anos, na administração pública de Mato Grosso do Sul, construindo entre 2013 e 2024 uma trajetória de mais de uma década ligada às estruturas institucionais do Estado.
-              </p>
-              <p>
-                A experiência aproximou sua atuação da gestão pública, do planejamento, da execução de projetos e da articulação entre pessoas, instituições e territórios.
-              </p>
-              <p>
-                É fundadora do <strong className="font-semibold text-brand-primary">Movimento RÁZGA®</strong>, criado a partir de uma travessia pessoal que transformou experiência em posicionamento e, posteriormente, em movimento. Sua trajetória conecta hoje diferentes campos em torno de um mesmo eixo: pessoas, direitos, participação social e territórios.
-              </p>
-            </Section>
+            {/* Top Area: Profile Intro & Photo */}
+            <div>
+              <div className="flex flex-col-reverse md:flex-row justify-between items-center md:items-start gap-5 sm:gap-6 mb-5 sm:mb-6">
+                
+                {/* Left Text Block */}
+                <div className="flex-1 w-full text-left">
+                  <div className="font-sans font-bold text-[10.5px] sm:text-[11px] md:text-[11.5px] uppercase tracking-[0.2em] text-[#631B26] mb-1.5">
+                    Perfil Executivo | 2026
+                  </div>
+                  
+                  <h1 className="font-serif font-bold text-3xl sm:text-4xl md:text-[50px] leading-[1] text-[#1A1818] tracking-tight mb-2 sm:mb-2.5">
+                    MAYARA<br />BARROS
+                  </h1>
 
-            {/* Movimento RÁZGA® */}
-            <Section title="Movimento RÁZGA®" delay={0.2}>
-              <p>
-                Mayara transformou uma experiência individual de ruptura na origem de um movimento social. <span className="font-semibold text-brand-primary">RÁZGA significa RASGAR DE A A Z.</span>
-              </p>
-              <p>
-                O movimento nasce das histórias e dos silenciamentos vividos por mulheres, mas compreende que romper sua normalização é uma responsabilidade que atravessa toda a sociedade. Mulheres, homens, lideranças, comunidades, movimentos e instituições podem encontrar seu lugar nessa construção.
-              </p>
-              <p>
-                O RÁZGA não existe para falar por mulheres. Existe para contribuir para que suas próprias vozes encontrem espaço para serem ouvidas e para provocar responsabilidade diante daquilo que precisa ser visto, ouvido e transformado.
-              </p>
+                  <div className="font-sans font-semibold text-[13.5px] sm:text-[14.5px] md:text-[15.5px] leading-[1.3] text-[#631B26] mb-3 sm:mb-4">
+                    Estrategista em Desenvolvimento Institucional<br />e Projetos de Impacto
+                  </div>
 
-              {/* RÁZGA Highlight Box */}
-              <div className="mt-2.5 print:mt-1.5 p-3 print:p-2 bg-brand-primary/[0.03] border-l-2 border-brand-primary border-y border-r border-brand-gold/30 rounded-r-[2px] text-[12px] md:text-[12.5px] print:text-[8.5px] leading-relaxed">
-                <div className="flex flex-wrap items-center justify-between gap-1.5 mb-1">
-                  <span className="font-serif italic font-semibold text-brand-primary">
-                    “Quem não aceita o silêncio, RÁZGA.”
-                  </span>
-                  <span className="text-[10px] print:text-[7.5px] font-bold tracking-[0.1em] text-brand-gold uppercase px-1.5 py-0.5 border border-brand-gold/40">
-                    EU RÁZGO.
-                  </span>
+                  <div className="font-serif font-bold text-[15px] sm:text-[16px] md:text-[17.5px] leading-[1.28] text-[#1A1818]">
+                    Transformar intenção em direção.<br />
+                    E direção em projetos que acontecem.
+                  </div>
                 </div>
-                <p className="italic text-brand-text/80 text-[11.5px] print:text-[8px]">
-                  “Eu rasguei primeiro. Agora abro caminho.” — Frase da Fundadora
+
+                {/* Right Photo Block - Exact vertical proportion and hand visibility */}
+                <div className="shrink-0 self-center md:self-start">
+                  <div className="w-[160px] h-[225px] sm:w-[190px] sm:h-[265px] md:w-[215px] md:h-[285px] bg-[#E5E0D8] rounded-[2px] overflow-hidden shadow-sm border border-[#631B26]/20">
+                    <img 
+                      src="/mayara-barros-livro.jpeg"
+                      alt="Mayara Barros"
+                      className="w-full h-full object-cover object-[center_36%]"
+                      onError={(e) => {
+                        const target = e.currentTarget;
+                        if (target.src.indexOf("IMG_6120") === -1) {
+                          target.src = "/IMG_6120.JPEG";
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* 3 Summary Paragraphs */}
+              <div className="space-y-2.5 text-[12px] sm:text-[12.5px] md:text-[13px] leading-[1.58] text-[#2D2828] mb-5">
+                <p className="font-medium text-[#1A1818]">
+                  Mayara Barros atua conectando estratégia, pessoas, instituições e territórios para transformar desafios em soluções, projetos e resultados concretos.
                 </p>
-                <div className="mt-2 print:mt-1 pt-1.5 border-t border-brand-gold/20 flex items-center justify-between">
-                  <a 
-                    href="https://razga.vercel.app" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 text-[11px] print:text-[8px] font-semibold text-brand-primary hover:underline"
-                  >
-                    <span>www.razga.vercel.app</span>
-                    <ExternalLink size={12} className="print:hidden" />
-                  </a>
-                  <span className="text-[10px] print:text-[7.5px] uppercase tracking-wider text-brand-gold">
-                    Movimento RÁZGA®
-                  </span>
+                <p>
+                  Sua trajetória atravessa a administração pública, a política, a iniciativa privada e o terceiro setor. Diferentes ambientes que construíram, ao longo dos anos, uma mesma capacidade: ler cenários, encontrar caminhos, aproximar pessoas e instituições e transformar ideias em projetos capazes de acontecer.
+                </p>
+                <p className="font-medium text-[#1A1818]">
+                  Hoje, essa experiência converge para uma atuação voltada ao desenvolvimento institucional e à construção de projetos de impacto, conectando estratégia à execução e propósito a resultados.
+                </p>
+              </div>
+
+              {/* Horizontal Wine Divider Line */}
+              <div className="w-full border-b-[1.5px] border-[#631B26] mb-5" />
+
+              {/* 2-Column Section */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-7 text-[12px] md:text-[12.5px] leading-[1.52] text-[#2D2828]">
+                
+                {/* Column 1 (Left) */}
+                <div className="space-y-4">
+                  {/* UMA TRAJETÓRIA */}
+                  <div>
+                    <h2 className="font-sans font-bold text-[11px] md:text-[11.5px] uppercase tracking-[0.05em] text-[#631B26] mb-1.5 sm:mb-2 leading-snug">
+                      Uma Trajetória Construída por Dentro das Instituições
+                    </h2>
+                    <div className="space-y-2">
+                      <p>
+                        Mayara começou a trabalhar aos <strong>16 anos</strong>. Entre <strong>2013 e 2024</strong>, construiu mais de uma década de experiência na administração pública de Mato Grosso do Sul.
+                      </p>
+                      <p>
+                        Passou pelas Secretarias de Estado de <strong>Saúde, Fazenda e Educação</strong>, pela <strong>Fundesporte</strong> e pela <strong>Casa Civil</strong>, atuando em administração e finanças, controladoria, planejamento, projetos, gabinete e articulação institucional.
+                      </p>
+                      <p>
+                        Essa experiência lhe permitiu conhecer as estruturas públicas por dentro e compreender como decisões, instituições e projetos se conectam às pessoas e aos territórios onde seus efeitos realmente acontecem.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* POLÍTICA, MOBILIZAÇÃO E PARTICIPAÇÃO */}
+                  <div>
+                    <h2 className="font-sans font-bold text-[11px] md:text-[11.5px] uppercase tracking-[0.05em] text-[#631B26] mb-1.5 sm:mb-2 leading-snug">
+                      Política, Mobilização e Participação
+                    </h2>
+                    <div className="space-y-2">
+                      <p>
+                        Sua trajetória política começou em <strong>2016</strong> e reúne experiências em estratégia, mobilização, organização e formação de equipes, planejamento e operações de campanhas municipais, estaduais e federais.
+                      </p>
+                      <p>
+                        Em <strong>2024</strong>, foi candidata ao Legislativo Municipal de Campo Grande. Atualmente, preside a <strong>Ação da Mulher Trabalhista de Mato Grosso do Sul - AMT/MS | PDT</strong>, com atuação na organização e ampliação da participação das mulheres nos espaços políticos e de decisão.
+                      </p>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </Section>
 
-            {/* Trajetória: Administração Pública */}
-            <Section title="Trajetória" delay={0.3}>
-              <div className="text-[11px] print:text-[8px] uppercase tracking-[0.1em] font-semibold text-brand-gold mb-1">
-                2013 — 2024 | ADMINISTRAÇÃO PÚBLICA
-              </div>
-              <p>
-                Mayara iniciou sua trajetória profissional aos 16 anos e construiu, entre 2013 e 2024, uma trajetória de mais de uma década ligada à administração pública e às estruturas institucionais de Mato Grosso do Sul.
-              </p>
-              <div className="my-1.5 print:my-1 pl-3 print:pl-2 border-l border-brand-gold/40 text-[12.5px] print:text-[8.8px] leading-snug space-y-0.5 text-brand-text">
-                <div>• Secretaria de Estado de Saúde</div>
-                <div>• Secretaria de Estado de Fazenda</div>
-                <div>• Secretaria de Estado de Educação</div>
-                <div>• Fundação de Desporto e Lazer (Fundesporte)</div>
-                <div>• Casa Civil</div>
-              </div>
-              <p>
-                Sua experiência atravessou áreas administrativas, financeiras, controladoria, planejamento, gestão de projetos, gabinete e articulação institucional, acompanhando na prática a relação entre gestão, políticas públicas e a vida das pessoas.
-              </p>
-            </Section>
+                {/* Column 2 (Right) */}
+                <div>
+                  {/* DA EXPERIÊNCIA À CONSTRUÇÃO */}
+                  <div>
+                    <h2 className="font-sans font-bold text-[11px] md:text-[11.5px] uppercase tracking-[0.05em] text-[#631B26] mb-1.5 sm:mb-2 leading-snug">
+                      Da Experiência à Construção
+                    </h2>
+                    <div className="space-y-2">
+                      <p>
+                        Mayara é sócia e cofundadora do <strong>Grupo Novo Horizonte®</strong>, ecossistema que conecta quatro frentes: <strong>Synapt Essence, Escola da Consciência Viva, Mundial Business e Instituto Novo Horizonte</strong>.
+                      </p>
+                      <p>
+                        Cada frente atua a partir de uma dimensão própria, conectando desenvolvimento humano, formação, estratégia, negócios e impacto social sob uma visão comum:
+                      </p>
+                      
+                      {/* Highlighted 3 Lines */}
+                      <div className="py-1 space-y-0.5 font-serif font-bold text-[13.5px] md:text-[14px] text-[#631B26]">
+                        <div>Pessoas fortalecidas.</div>
+                        <div>Comunidades vivas.</div>
+                        <div>Territórios regenerados.</div>
+                      </div>
 
-          </main>
-
-          {/* Coluna Secundária (Right) */}
-          <aside className="lg:border-l print:border-l border-brand-gold/30 lg:pl-8 print:pl-4 flex flex-col">
-            
-            {/* Mobilização Social e Atuação Institucional */}
-            <Section title="Mobilização Social e Atuação Institucional" delay={0.25}>
-              <p>
-                Mayara atua na articulação de pessoas, projetos, lideranças e iniciativas voltadas à participação social e à construção de caminhos para mulheres, famílias e comunidades.
-              </p>
-              <p>
-                É <strong className="font-semibold text-brand-primary">Vice-Presidente do Instituto Novo Horizonte</strong>, onde participa da estruturação de iniciativas sociais voltadas à cidadania, desenvolvimento social e fortalecimento de territórios.
-              </p>
-              <p>
-                Também participa do <strong className="font-semibold text-brand-primary">Horizonte Mulher</strong>, programa do Instituto voltado ao acolhimento e encaminhamento de mulheres, fortalecendo redes e conexões comunitárias.
-              </p>
-            </Section>
-
-            {/* Formação e Atuação Prática no Campo Jurídico */}
-            <Section title="Formação e Atuação Prática no Campo Jurídico" delay={0.35}>
-              <p>
-                Em formação em Direito, Mayara também desenvolve atuação prática no campo jurídico, tanto em iniciativas sociais quanto no ambiente privado, sempre respeitados os limites profissionais aplicáveis à sua formação.
-              </p>
-              <p>
-                No Instituto Novo Horizonte, participa de atendimentos, análise de demandas e construção de encaminhamentos junto a profissionais habilitados e à rede de acolhimento. Na esfera privada, integra rotinas de atendimento, análise documental e suporte jurídico prático.
-              </p>
-              <div className="pt-1 print:pt-0.5">
-                <div className="text-[10px] print:text-[7.5px] uppercase tracking-[0.08em] text-brand-gold font-semibold mb-1">
-                  Aproximação Temática:
+                      <p>
+                        Dentro desse ecossistema, a <strong>Mundial Business</strong> representa a frente de estratégia, desenvolvimento institucional e projetos de impacto - território diretamente conectado à atuação profissional que Mayara vem consolidando.
+                      </p>
+                      <p>
+                        No <strong>Instituto Novo Horizonte</strong>, onde exerce a Vice-Presidência, participa do desenvolvimento de projetos voltados a mulheres, famílias e comunidades, entre eles o <strong>Horizonte Mulher</strong>.
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                <div className="text-[11px] print:text-[8px] font-semibold text-brand-primary uppercase tracking-[0.05em]">
-                  Mulheres • Famílias • Violência Doméstica • Acesso a Direitos
-                </div>
+
               </div>
-            </Section>
-
-            {/* Atuação Política */}
-            <Section title="Atuação Política" delay={0.45}>
-              <p>
-                Participa de processos políticos e eleitorais desde 2016, com experiência em mobilização, organização de equipes, planejamento estratégico e operação de campanhas municipais, estaduais e federais.
-              </p>
-              <p>
-                Foi candidata ao Legislativo Municipal de Campo Grande em 2024 e atualmente exerce a <strong className="font-semibold text-brand-primary">Presidência da Ação da Mulher Trabalhista de Mato Grosso do Sul — AMT/MS</strong>, integrando a construção de espaços de participação feminina.
-              </p>
-            </Section>
-
-            {/* Formação Acadêmica */}
-            <Section title="Formação" delay={0.5}>
-              <div className="text-[13px] print:text-[9.5px]">
-                <div className="font-semibold text-brand-primary">Bacharelado em Direito — UNIDERP</div>
-                <div className="text-brand-gold text-[12px] print:text-[8.5px]">Em conclusão • 2026</div>
-                <div className="text-brand-text/70 text-[11px] print:text-[8px]">Campo Grande — Mato Grosso do Sul</div>
-              </div>
-            </Section>
-
-            {/* Áreas de Atuação */}
-            <Section title="Áreas de Atuação" delay={0.55} className="mb-0 print:mb-0">
-              <div className="flex flex-wrap gap-1 print:gap-0.5">
-                {[
-                  "Mobilização Social",
-                  "Articulação Institucional",
-                  "Gestão Pública",
-                  "Construção de Movimentos",
-                  "Desenvolvimento de Projetos",
-                  "Conexão de Lideranças e Territórios",
-                  "Formação e Atuação Prática no Campo Jurídico"
-                ].map((area, i) => (
-                  <span 
-                    key={i} 
-                    className="inline-block px-2 py-0.5 text-[10.5px] print:text-[7.5px] uppercase tracking-[0.04em] border border-brand-primary/40 text-brand-primary bg-white/40 print:bg-transparent rounded-[2px]"
-                  >
-                    {area}
-                  </span>
-                ))}
-              </div>
-            </Section>
-
-          </aside>
-
-        </div>
-
-        {/* Institutional Sign-off Footer */}
-        <footer className="border-t border-brand-gold/30 pt-3 mt-4 print:pt-1.5 print:mt-2 text-brand-text flex flex-col md:flex-row print:flex-row justify-between items-start md:items-center print:items-center gap-2 text-[11px] print:text-[8px] leading-tight">
-          <div>
-            <div className="font-semibold text-brand-primary uppercase tracking-[0.08em] text-[12px] print:text-[8.5px]">
-              Mayara Barros
             </div>
-            <div className="text-brand-text/80 text-[11px] print:text-[7.5px]">
-              Fundadora do Movimento RÁZGA® • Vice-Presidente do Instituto Novo Horizonte • Direito — em formação • Presidente da AMT/MS
-            </div>
+
           </div>
+
+          {/* Bottom Wine Bar */}
+          <div className="w-full h-[14px] sm:h-[18px] bg-[#631B26] shrink-0" />
+        </section>
+
+
+        {/* ======================================================== */}
+        {/* PAGE 2                                                   */}
+        {/* ======================================================== */}
+        <section className="a4-page pdf-page-2 relative flex flex-col justify-between shadow-[0_8px_30px_rgba(0,0,0,0.1)] print:shadow-none border border-[#631B26]/10 print:border-none overflow-hidden rounded-[2px] sm:rounded-none">
           
-          <div className="flex flex-col md:items-end print:items-end text-right">
-            <div className="font-serif italic font-semibold text-brand-primary text-[11.5px] print:text-[8px]">
-              RÁZGA® • QUEM NÃO ACEITA O SILÊNCIO, RÁZGA.
-            </div>
-            <div className="flex items-center gap-2 text-brand-gold text-[10px] print:text-[7.5px] uppercase tracking-[0.05em]">
-              <span className="flex items-center gap-1">
-                <MapPin size={11} className="print:w-2.5 print:h-2.5" />
-                Campo Grande – MS
-              </span>
-              <span>•</span>
-              <a 
-                href="https://razga.vercel.app" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="underline hover:text-brand-primary"
-              >
-                www.razga.vercel.app
-              </a>
-            </div>
-          </div>
-        </footer>
+          {/* Top Wine Bar */}
+          <div className="w-full h-[14px] sm:h-[18px] bg-[#631B26] shrink-0" />
 
-      </div>
+          {/* Page 2 Body */}
+          <div className="px-5 py-6 sm:px-8 sm:py-8 md:px-14 md:pt-8 md:pb-8 flex-grow flex flex-col justify-between">
+            
+            <div>
+              {/* Header Title */}
+              <div className="font-sans font-bold text-[10.5px] sm:text-[11px] md:text-[11.5px] uppercase tracking-[0.2em] text-[#631B26] mb-1.5">
+                Movimento, Formação e Direção
+              </div>
+
+              <h2 className="font-serif font-bold text-2xl sm:text-3xl md:text-[38px] leading-[1.1] text-[#1A1818] tracking-tight mb-3 sm:mb-4">
+                RÁZGA: QUANDO UMA EXPERIÊNCIA<br />
+                SE TORNA MOVIMENTO
+              </h2>
+
+              {/* RÁZGA Texts */}
+              <div className="space-y-2.5 text-[12px] sm:text-[12.5px] md:text-[13px] leading-[1.55] text-[#2D2828] mb-4">
+                <p>
+                  Mayara é fundadora do <strong>Movimento RÁZGA®</strong>, que nasceu de sua própria travessia por experiências de violência e silenciamento familiar, político e institucional. O que começou como uma ruptura individual encontrou outras histórias e ganhou dimensão coletiva.
+                </p>
+                <p>
+                  Hoje, o RÁZGA conecta pessoas, lideranças, comunidades, movimentos e instituições em torno de uma escolha comum: não normalizar o silenciamento das mulheres e construir caminhos para que suas próprias vozes e demandas encontrem espaço e possam chegar aos lugares onde decisões são tomadas.
+                </p>
+              </div>
+
+              {/* Process Box: ESCUTAR → NOMEAR → ROMPER → CONSTRUIR */}
+              <div className="w-full border-[1.5px] border-[#1A1818]/80 py-2 sm:py-2.5 px-2 sm:px-4 mb-3.5 flex items-center justify-between text-center rounded-[1px] bg-[#FAF8F5]">
+                <span className="font-sans font-bold text-[9.5px] sm:text-[11px] md:text-[12px] uppercase tracking-[0.05em] sm:tracking-[0.14em] text-[#1A1818]">
+                  Escutar
+                </span>
+                <span className="text-[#631B26] font-bold text-[12px] sm:text-[14px]">→</span>
+                <span className="font-sans font-bold text-[9.5px] sm:text-[11px] md:text-[12px] uppercase tracking-[0.05em] sm:tracking-[0.14em] text-[#1A1818]">
+                  Nomear
+                </span>
+                <span className="text-[#631B26] font-bold text-[12px] sm:text-[14px]">→</span>
+                <span className="font-sans font-bold text-[9.5px] sm:text-[11px] md:text-[12px] uppercase tracking-[0.05em] sm:tracking-[0.14em] text-[#1A1818]">
+                  Romper
+                </span>
+                <span className="text-[#631B26] font-bold text-[12px] sm:text-[14px]">→</span>
+                <span className="font-sans font-bold text-[9.5px] sm:text-[11px] md:text-[12px] uppercase tracking-[0.05em] sm:tracking-[0.14em] text-[#1A1818]">
+                  Construir
+                </span>
+              </div>
+
+              {/* Highlight Quote */}
+              <div className="text-center my-3 sm:my-3.5 px-2">
+                <p className="font-serif font-bold text-[13.5px] sm:text-[15px] md:text-[16px] text-[#631B26] leading-snug">
+                  “O que há de humano em mim não aceita mais normalizar o silenciamento de uma mulher.”
+                </p>
+              </div>
+
+              {/* Horizontal Wine Divider Line */}
+              <div className="w-full border-b-[1.5px] border-[#631B26] mb-5" />
+
+              {/* 2-Column Lower Section */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-7 text-[12px] md:text-[12.5px] leading-[1.52] text-[#2D2828] mb-6 sm:mb-8">
+                
+                {/* Column 1 (Left): DIREITO E NOVOS CAMINHOS */}
+                <div>
+                  <h3 className="font-sans font-bold text-[11px] md:text-[11.5px] uppercase tracking-[0.05em] text-[#631B26] mb-1.5 sm:mb-2 leading-snug">
+                    Direito e Novos Caminhos
+                  </h3>
+                  <div className="space-y-2">
+                    <p>
+                      Graduanda em <strong>Direito pela UNIDERP</strong>, Mayara também atua no campo jurídico em demandas desenvolvidas pelo Instituto Novo Horizonte e no ambiente privado.
+                    </p>
+                    <p>
+                      A formação jurídica se soma a uma trajetória construída entre gestão pública, política, instituições, negócios e impacto social, ampliando seu repertório para compreender estruturas e desenvolver projetos e soluções que atravessam diferentes setores.
+                    </p>
+                    <p>
+                      Mais do que reunir experiências em áreas distintas, sua trajetória revela um fio comum: <strong>entender o cenário, construir direção, conectar quem precisa estar à mesa e transformar intenção em projetos capazes de acontecer.</strong>
+                    </p>
+                  </div>
+                </div>
+
+                {/* Column 2 (Right): ATUAÇÃO ATUAL */}
+                <div>
+                  <h3 className="font-sans font-bold text-[11px] md:text-[11.5px] uppercase tracking-[0.05em] text-[#631B26] mb-2 sm:mb-2.5 leading-snug">
+                    Atuação Atual
+                  </h3>
+                  
+                  <div className="space-y-2 text-[12px] md:text-[12.5px] leading-tight">
+                    <div>
+                      <div className="font-bold text-[#1A1818]">Sócia e Cofundadora</div>
+                      <div className="text-[#3D3838]">Grupo Novo Horizonte®</div>
+                    </div>
+                    
+                    <div>
+                      <div className="font-bold text-[#1A1818]">Direção Estratégica</div>
+                      <div className="text-[#3D3838]">Mundial Business</div>
+                    </div>
+
+                    <div>
+                      <div className="font-bold text-[#1A1818]">Fundadora</div>
+                      <div className="text-[#3D3838]">Movimento RÁZGA®</div>
+                    </div>
+
+                    <div>
+                      <div className="font-bold text-[#1A1818]">Vice-Presidente</div>
+                      <div className="text-[#3D3838]">Instituto Novo Horizonte</div>
+                    </div>
+
+                    <div>
+                      <div className="font-bold text-[#1A1818]">Presidente</div>
+                      <div className="text-[#3D3838]">AMT/MS | PDT</div>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            {/* Bottom Closing Sign-off */}
+            <div className="pt-2">
+              <div className="font-serif font-bold text-[22px] sm:text-[25px] md:text-[27px] text-[#1A1818] leading-tight mb-0.5">
+                MAYARA BARROS
+              </div>
+              <div className="font-sans font-medium text-[12.5px] sm:text-[13px] md:text-[14px] text-[#631B26] mb-2 sm:mb-3">
+                Estrategista em Desenvolvimento Institucional e Projetos de Impacto
+              </div>
+              <div className="font-serif font-bold text-[14.5px] sm:text-[15.5px] md:text-[17px] text-[#1A1818] leading-[1.3]">
+                Transformar intenção em direção.<br />
+                E direção em projetos que acontecem.
+              </div>
+            </div>
+
+          </div>
+
+          {/* Bottom Wine Bar */}
+          <div className="w-full h-[14px] sm:h-[18px] bg-[#631B26] shrink-0" />
+        </section>
+
+      </main>
+
     </div>
   );
 }

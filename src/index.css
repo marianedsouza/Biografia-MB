@@ -1,28 +1,55 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Helvetica Neue", Arial, sans-serif;
-  --font-serif: "Georgia", serif;
+  --font-sans: "Plus Jakarta Sans", "Helvetica Neue", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-serif: "Playfair Display", Georgia, Cambria, "Times New Roman", serif;
   
-  --color-brand-bg: #F7F6F3;
-  --color-brand-primary: #6A1E2C;
-  --color-brand-text: #2B2B2B;
+  --color-brand-wine: #631B26;
+  --color-brand-wine-dark: #4F131D;
+  --color-brand-wine-light: #7E2432;
+  --color-brand-paper: #FAF8F5;
+  --color-brand-desk: #EAE7E1;
+  --color-brand-dark: #1A1818;
+  --color-brand-body: #2D2828;
+  --color-brand-muted: #666060;
   --color-brand-gold: #C6A86B;
 }
 
 body {
-  background-color: var(--color-brand-bg);
-  color: var(--color-brand-text);
+  background-color: var(--color-brand-desk);
+  color: var(--color-brand-body);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 ::selection {
-  background-color: var(--color-brand-gold);
-  color: #fff;
+  background-color: var(--color-brand-wine);
+  color: #ffffff;
 }
 
+/* Page Break and A4 Dimensions */
+.a4-page {
+  width: 100%;
+  max-width: 800px;
+  background-color: var(--color-brand-paper);
+  box-sizing: border-box;
+}
+
+@media (min-width: 768px) {
+  .a4-page {
+    min-height: 1130px;
+  }
+}
+
+@media (max-width: 767px) {
+  .a4-page {
+    min-height: auto;
+  }
+}
+
+/* Print Styles - Guaranteed 2-Page A4 Output */
 @media print {
   @page {
     size: A4 portrait;
@@ -32,33 +59,48 @@ body {
   *, *::before, *::after {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
-  }
-  
-  html, body {
-    width: 210mm;
-    height: 297mm;
-    background-color: var(--color-brand-bg) !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    overflow: hidden !important;
+    color-adjust: exact !important;
     box-sizing: border-box !important;
   }
   
-  /* Ensure the grid doesn't break pages across */
-  .container, #root {
-    page-break-after: avoid; 
-    page-break-before: avoid;
-    background-color: var(--color-brand-bg) !important;
-    width: 210mm;
-    height: 297mm;
-    overflow: hidden;
+  html, body {
+    width: 100% !important;
+    height: auto !important;
+    background-color: var(--color-brand-paper) !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  
+  #root, .print-wrapper {
+    background-color: var(--color-brand-paper) !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
-  /* 
-   IMPORTANT: Force framer-motion elements to be fully visible and in place.
-   When printing directly from mobile without scrolling, elements with 'whileInView' 
-   might still hold 'opacity: 0' and 'transform' inline styles.
-  */
+  .a4-page {
+    width: 210mm !important;
+    min-height: 297mm !important;
+    height: 297mm !important;
+    max-height: 297mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    overflow: hidden !important;
+  }
+
+  .a4-page:first-of-type {
+    page-break-after: always !important;
+    break-after: page !important;
+  }
+
+  .a4-page:last-of-type {
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+  }
+
+  /* Force elements to be in place without web animation transforms */
   * {
     opacity: 1 !important;
     transform: none !important;
@@ -66,7 +108,6 @@ body {
     transition: none !important;
   }
 
-  /* Keep the print fallback UI hidden correctly in actual print */
   .print\:hidden {
     display: none !important;
   }
