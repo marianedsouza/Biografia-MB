@@ -14,47 +14,121 @@ export default function App() {
   const [copied, setCopied] = useState(false);
   const documentRef = useRef<HTMLDivElement>(null);
 
-  // Reliable PDF Export via html2pdf.js
+  // Reliable 2-Page A4 PDF Export using jsPDF and html2canvas
   const handleExportPDF = async () => {
     if (!documentRef.current) return;
     setIsExporting(true);
     setExportSuccess(false);
 
-    try {
-      // Dynamically import html2pdf for robust client-side execution
-      const html2pdfModule = await import("html2pdf.js");
-      const html2pdf = (html2pdfModule.default || html2pdfModule) as any;
+    // Save previous scroll position and scroll to top for flawless capture
+    const originalScrollX = window.scrollX;
+    const originalScrollY = window.scrollY;
+    window.scrollTo(0, 0);
 
-      const opt = {
-        margin: 0,
-        filename: "Mayara_Barros_Perfil_Executivo_2026.pdf",
-        image: { type: "jpeg", quality: 0.98 },
-        html2canvas: { 
-          scale: 2, 
-          useCORS: true, 
-          letterRendering: true,
-          scrollY: 0,
-          backgroundColor: "#FAF8F5"
-        },
-        jsPDF: { 
-          unit: "mm", 
-          format: "a4", 
-          orientation: "portrait" 
-        },
-        pagebreak: { 
-          mode: ["avoid-all", "css", "legacy"],
-          before: ".pdf-page-2"
+    try {
+      const page1El = document.getElementById("pdf-page-1");
+      const page2El = document.getElementById("pdf-page-2");
+
+      if (!page1El || !page2El) {
+        throw new Error("Páginas do documento não encontradas para exportação.");
+      }
+
+      // Ensure images in Page 1 are fully loaded before capturing
+      const images = page1El.querySelectorAll("img");
+      await Promise.all(
+        Array.from(images).map((img) => {
+          if (img.complete) return Promise.resolve();
+          return new Promise((resolve) => {
+            img.onload = resolve;
+            img.onerror = resolve;
+          });
+        })
+      );
+
+      // Dynamically import jsPDF and html2canvas for fast loading
+      const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
+        import("jspdf"),
+        import("html2canvas"),
+      ]);
+
+      // Styling normalizer for the cloned document to guarantee desktop A4 proportions regardless of mobile device viewport
+      const normalizeClonedDoc = (clonedDoc: Document) => {
+        const p1 = clonedDoc.getElementById("pdf-page-1");
+        const p2 = clonedDoc.getElementById("pdf-page-2");
+        const wrapper = clonedDoc.querySelector(".print-wrapper") as HTMLElement | null;
+
+        if (wrapper) {
+          wrapper.style.width = "800px";
+          wrapper.style.maxWidth = "800px";
+          wrapper.style.padding = "0";
+          wrapper.style.margin = "0 auto";
+          wrapper.style.gap = "0";
         }
+
+        [p1, p2].forEach((p) => {
+          if (p) {
+            p.style.width = "800px";
+            p.style.minWidth = "800px";
+            p.style.maxWidth = "800px";
+            p.style.height = "1131px";
+            p.style.minHeight = "1131px";
+            p.style.maxHeight = "1131px";
+            p.style.boxShadow = "none";
+            p.style.border = "none";
+            p.style.margin = "0";
+            p.style.overflow = "hidden";
+          }
+        });
       };
 
-      await html2pdf().set(opt).from(documentRef.current).save();
+      const captureOptions = {
+        scale: 2, // Crisp 2x high-resolution rendering
+        useCORS: true,
+        letterRendering: true,
+        backgroundColor: "#FAF8F5",
+        windowWidth: 1200, // Forces desktop layout media queries
+        scrollX: 0,
+        scrollY: 0,
+        logging: false,
+        onclone: normalizeClonedDoc,
+      };
+
+      // Capture Page 1 and Page 2 as crisp individual canvases
+      const canvas1 = await html2canvas(page1El, captureOptions);
+      const canvas2 = await html2canvas(page2El, captureOptions);
+
+      // Initialize standard A4 Portrait PDF
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
+        compress: true,
+      });
+
+      const a4Width = 210;
+      const a4Height = 297;
+
+      const imgData1 = canvas1.toDataURL("image/jpeg", 0.98);
+      const imgData2 = canvas2.toDataURL("image/jpeg", 0.98);
+
+      // Page 1
+      pdf.addImage(imgData1, "JPEG", 0, 0, a4Width, a4Height, undefined, "FAST");
+
+      // Exactly Page 2 (Guaranteed 2-page document)
+      pdf.addPage("a4", "portrait");
+      pdf.addImage(imgData2, "JPEG", 0, 0, a4Width, a4Height, undefined, "FAST");
+
+      // Save official PDF with executive name
+      pdf.save("Mayara_Barros_Perfil_Executivo_2026.pdf");
+
       setExportSuccess(true);
       setTimeout(() => setExportSuccess(false), 3000);
     } catch (err) {
       console.error("PDF export error:", err);
-      // Fallback to window.print if html2pdf encounters an issue
+      // Fallback to window.print if export encounters an issue
       window.print();
     } finally {
+      window.scrollTo(originalScrollX, originalScrollY);
       setIsExporting(false);
     }
   };
@@ -78,7 +152,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#EAE7E1] text-[#2D2828] flex flex-col items-center py-3 sm:py-6 md:py-10 pb-8 sm:pb-12 print:py-0 print:pb-0 print:bg-[#FAF8F5] relative antialiased selection:bg-[#631B26] selection:text-white">
+    <div className="min-h-screen bg-[#EAE7E1] text-[#2D2828] flex flex-col items-center py-3 sm:py-6 md:py-10 pb-8 sm:pb-12 print:block print:w-[210mm] print:min-h-0 print:py-0 print:pb-0 print:bg-[#FAF8F5] relative antialiased selection:bg-[#631B26] selection:text-white">
       
       {/* Top Action Bar (Header with all actions) */}
       <nav aria-label="Menu de Ações" className="print:hidden w-full max-w-[820px] px-2 sm:px-4 md:px-0 mb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
@@ -148,7 +222,7 @@ export default function App() {
         {/* ======================================================== */}
         {/* PAGE 1                                                   */}
         {/* ======================================================== */}
-        <section className="a4-page relative flex flex-col justify-between shadow-[0_8px_30px_rgba(0,0,0,0.1)] print:shadow-none border border-[#631B26]/10 print:border-none overflow-hidden rounded-[2px] sm:rounded-none">
+        <section id="pdf-page-1" className="a4-page relative flex flex-col justify-between shadow-[0_8px_30px_rgba(0,0,0,0.1)] print:shadow-none border border-[#631B26]/10 print:border-none overflow-hidden rounded-[2px] sm:rounded-none">
           
           {/* Top Wine Bar */}
           <div className="w-full h-[14px] sm:h-[18px] bg-[#631B26] shrink-0" />
@@ -185,6 +259,7 @@ export default function App() {
                   <div className="w-[160px] h-[225px] sm:w-[190px] sm:h-[265px] md:w-[215px] md:h-[285px] bg-[#E5E0D8] rounded-[2px] overflow-hidden shadow-sm border border-[#631B26]/20">
                     <img 
                       src="/mayara-barros-livro.jpeg"
+                      crossOrigin="anonymous"
                       alt="Mayara Barros"
                       className="w-full h-full object-cover object-[center_36%]"
                       onError={(e) => {
@@ -298,7 +373,7 @@ export default function App() {
         {/* ======================================================== */}
         {/* PAGE 2                                                   */}
         {/* ======================================================== */}
-        <section className="a4-page pdf-page-2 relative flex flex-col justify-between shadow-[0_8px_30px_rgba(0,0,0,0.1)] print:shadow-none border border-[#631B26]/10 print:border-none overflow-hidden rounded-[2px] sm:rounded-none">
+        <section id="pdf-page-2" className="a4-page pdf-page-2 relative flex flex-col justify-between shadow-[0_8px_30px_rgba(0,0,0,0.1)] print:shadow-none border border-[#631B26]/10 print:border-none overflow-hidden rounded-[2px] sm:rounded-none">
           
           {/* Top Wine Bar */}
           <div className="w-full h-[14px] sm:h-[18px] bg-[#631B26] shrink-0" />
