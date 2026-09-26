@@ -232,31 +232,27 @@ export default function App() {
             
             {/* Top Area: Profile Intro & Photo */}
             <div>
-              <div className="flex flex-col-reverse md:flex-row justify-between items-center md:items-start gap-5 sm:gap-6 mb-5 sm:mb-6">
+              <div className="flex flex-row justify-between items-start gap-3 sm:gap-6 mb-5 sm:mb-6">
                 
                 {/* Left Text Block */}
-                <div className="flex-1 w-full text-left">
-                  <div className="font-sans font-bold text-[10.5px] sm:text-[11px] md:text-[11.5px] uppercase tracking-[0.2em] text-[#631B26] mb-1.5">
-                    Perfil Executivo | 2026
-                  </div>
-                  
-                  <h1 className="font-serif font-bold text-3xl sm:text-4xl md:text-[50px] leading-[1] text-[#1A1818] tracking-tight mb-2 sm:mb-2.5">
+                <div className="flex-1 min-w-0 text-left">
+                  <h1 className="font-serif font-bold text-2xl sm:text-4xl md:text-[50px] leading-[1.05] text-[#1A1818] tracking-tight mb-2 sm:mb-2.5">
                     MAYARA<br />BARROS
                   </h1>
 
-                  <div className="font-sans font-semibold text-[13.5px] sm:text-[14.5px] md:text-[15.5px] leading-[1.3] text-[#631B26] mb-3 sm:mb-4">
+                  <div className="font-sans font-semibold text-[11.5px] sm:text-[14.5px] md:text-[15.5px] leading-[1.3] text-[#631B26] mb-2 sm:mb-4">
                     Estrategista em Desenvolvimento Institucional<br />e Projetos de Impacto
                   </div>
 
-                  <div className="font-serif font-bold text-[15px] sm:text-[16px] md:text-[17.5px] leading-[1.28] text-[#1A1818]">
+                  <div className="font-serif font-bold text-[13px] sm:text-[16px] md:text-[17.5px] leading-[1.28] text-[#1A1818]">
                     Transformar intenção em direção.<br />
                     E direção em projetos que acontecem.
                   </div>
                 </div>
 
-                {/* Right Photo Block - Exact vertical proportion and hand visibility */}
-                <div className="shrink-0 self-center md:self-start">
-                  <div className="w-[160px] h-[225px] sm:w-[190px] sm:h-[265px] md:w-[215px] md:h-[285px] bg-[#E5E0D8] rounded-[2px] overflow-hidden shadow-sm border border-[#631B26]/20">
+                {/* Right Photo Block - Kept on the right on all screens */}
+                <div className="shrink-0 self-start">
+                  <div className="w-[110px] h-[155px] sm:w-[170px] sm:h-[238px] md:w-[215px] md:h-[285px] bg-[#E5E0D8] rounded-[2px] overflow-hidden shadow-sm border border-[#631B26]/20">
                     <img 
                       src="/mayara-barros-livro.jpeg"
                       crossOrigin="anonymous"
